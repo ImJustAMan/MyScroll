@@ -1,3 +1,12 @@
+/*
+init: {
+	wrap: el,
+	loop: true||false,
+	dir: 'x||y',
+	startPage: 'num'
+}
+*/
+
 let normalAttr = [
 	'width',
 	'height',
@@ -45,6 +54,7 @@ function css(ele, attr, val){
 		}
 	}
 
+	// 批量设置
 	if(typeof attr === 'object'){
 		for(let key in attr){
 			setAttr(key, attr[key]);
@@ -261,112 +271,88 @@ let Tween = {
 		}
 		return Tween['bounceOut'](t*2-d, 0, c, d) * 0.5 + c*0.5 + b;
 	}
-}
+};
 
-function MyScroll(init) {
+class MyScroll {
+	constructor (init) {
+		const THIS = this;
 
-	let _this = this;
+		this.off = true;
+		this.event = 'click';
+		this.startPage = 1;
+		this.dir = 'x';
 
-	this.off = true;
-	this.event = 'click';
-	this.startPage = 1;
-	this.dir = 'x';
+		Object.assign(this,init);
 
-	for (let s in init) {
-		this[s] = init[s];
+		this.roll = this.wrap.children[0];
+		this.rolls = this.roll.children;
+		this.event = {};
+		this.pageNum = 0;
+		if (this.dir == 'x') {
+			this.pageSize = parseInt(this.rolls[0].offsetWidth);
+		}else if (this.dir == 'y') {
+			this.pageSize = parseInt(this.rolls[0].offsetHeight);
+		}
+
+		if (this.loop) {
+			this.roll.appendChild(this.rolls[0].cloneNode(true));
+		}
+
+		if (this.startPage > 0 && this.startPage <= this.rolls.length - 1) {
+			this.n = this.startPage - 1;
+		}else {
+			this.n = 0;
+		}
+
+		if (this.dir == 'x') {
+			css(this.roll,'translateX',- this.n * this.pageSize);
+		}else if (this.dir == 'y') {
+			css(this.roll,'translateY',- this.n * this.pageSize);
+		}
+		css(this.roll,'translateZ',0);
 	}
-
-	this.roll = this.wrap.children[0];
-	this.rolls = this.roll.children;
-	if (this.dir == 'x') {
-		this.pageSize = parseInt(this.rolls[0].offsetWidth);
-	}else if (this.dir == 'y') {
-		this.pageSize = parseInt(this.rolls[0].offsetHeight);
-	}
-
-	if (this.loop) {
-		this.roll.appendChild(this.rolls[0].cloneNode(true));
-	}
-
-	if (this.startPage > 0 && this.startPage <= this.rolls.length - 1) {
-		this.n = this.startPage - 1;
-	}else {
-		this.n = 0;
-	}
-
-	if (this.dir == 'x') {
-		css(this.roll,'translateX',- this.n * this.pageSize);
-	}else if (this.dir == 'y') {
-		css(this.roll,'translateY',- this.n * this.pageSize);
-	}
-
-	css(this.roll,'translateZ',0);
-
-	this.reset();
-	this.dotChange();
-
-	this.dots.forEach(function (item,index) {
-		item.addEventListener(_this.event,function() {
-			_this.reset();
-			item.classList.add(_this.activeClass);
-			_this.tab(index);
-		})
-	});
-
-}
-
-MyScroll.prototype = {
-	shift: function () {
-		let _this = this;
+	shift () {
+		const THIS = this;
 		if (this.dir == 'x') {
 			mTween({
-				el: _this.roll,
+				el: THIS.roll,
 				attrs: {
-					'translateX': - _this.n * _this.pageSize
+					'translateX': - THIS.n * THIS.pageSize
 				},
 				duration: 500,
 				fx: 'easeOut',
 				cb: function () {
-					_this.off = true;
+					THIS.off = true;
+					THIS.trigger('scrollEnd');
 				}
 			})
 		}else if (this.dir == 'y') {
 			mTween({
-				el: _this.roll,
+				el: THIS.roll,
 				attrs: {
-					'translateY': - _this.n * _this.pageSize
+					'translateY': - THIS.n * THIS.pageSize
 				},
 				duration: 500,
 				fx: 'easeOut',
 				cb: function () {
-					_this.off = true;
+					THIS.off = true;
+					THIS.trigger('scrollEnd');
 				}
 			})
 		}
-	},
-	tab: function (index) {
+	}
+	tab (index) {
 		this.n = index;
 		this.shift();
-	},
-	noFrame: function () {
-		this.roll.style.transition = 'none';
+	}
+	noFrame () {
 		if (this.dir == 'x') {
 			css(this.roll, 'translateX', -this.n * this.pageSize);
 		}else if (this.dir == 'y') {
 			css(this.roll, 'translateY', -this.n * this.pageSize);
 		}
-	},
-	reset: function () {
-		let _this = this;
-		this.dots.forEach(function (nav) {
-			nav.classList.remove(_this.activeClass);
-		})
-	},
-	dotChange: function () {
-		this.dots[this.n].classList.add('active')
-	},
-	next: function () {
-		let _this = this;
+	}
+	next () {
 		if (this.off) {
 			this.off = false;
 			if (this.loop) {
@@ -374,26 +360,18 @@ MyScroll.prototype = {
 					this.n = 0;
 					this.noFrame();
 				}
-				this.n++;
-				if(this.n <= this.rolls.length - 2) {
-					this.reset();
-					this.dotChange();
-				}else {
-					this.reset();
-					this.dots[0].classList.add('active');
-				}
 			}else {
-				if (this.n < this.rolls.length - 2) {
-					this.n++;
-					this.reset();
-					this.dotChange();
+				if (this.n > this.rolls.length - 2) {
+					this.off = true;
+					return;
 				}
 			}
+			this.n++;
+			this.pageNum = this.n % (this.rolls.length - 1);
 			this.shift();
 		}
-	},
-	prev: function () {
-		let _this = this;
+	}
+	prev () {
 		if (this.off) {
 			this.off = false;
 			if (this.loop) {
@@ -401,11 +379,28 @@ MyScroll.prototype = {
 					this.n = this.rolls.length - 1;
 					this.noFrame();
 				}
+			}else {
+				if (this.n < 1) {
+					this.off = true;
+					return ;
+				}
 			}
 			this.n--;
-			this.reset();
-			this.dotChange();
+			this.pageNum = this.n % (this.rolls.length - 1);
 			this.shift();
 		}
 	}
-};
+	addEv(eventName,fn){
+		this.event[eventName] = this.event[eventName]||[];
+		for(let i = 0; i < this.event[eventName].length; i++){
+			if(this.event[eventName][i] == fn)return;
+		}
+		this.event[eventName].push(fn);
+	}
+	trigger(eventName){
+		if(!this.event[eventName])return;
+		this.event[eventName].forEach((fn)=>{
+			fn.call(this);
+		});
+	}
+}
