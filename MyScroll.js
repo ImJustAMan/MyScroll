@@ -419,29 +419,3 @@ MyScroll.prototype = {
 		}
 	}
 };
-
-
-let prev = document.querySelector('.prev');
-let next = document.querySelector('.next');
-let wrap = document.querySelector('.wrap');
-let navs = document.querySelectorAll('nav span');
-
-let scroll = new MyScroll({
-	wrap,
-	dots:navs,
-	loop: true,
-	activeClass: 'active',
-	startPage: 3
-});
-
-
-prev.onclick = function () {
-	scroll.prev();
-};
-next.onclick = function () {
-	scroll.next();
-};
-
-/*setInterval(function () {
-	scroll.next();
-},1500);*/
