@@ -2,8 +2,11 @@
 init: {
 	wrap: el,
 	loop: true||false,
+	event: '',
 	dir: 'x||y',
-	startPage: 'num'
+	startPage: 'num',
+	dots: els,
+	activeClass: ''
 }
 */
 
@@ -273,86 +276,107 @@ let Tween = {
 	}
 };
 
-class MyScroll {
-	constructor (init) {
-		const THIS = this;
+function MyScroll(init) {
 
-		this.off = true;
-		this.event = 'click';
-		this.startPage = 1;
-		this.dir = 'x';
+	let _this = this;
 
-		Object.assign(this,init);
+	this.off = true;
+	this.event = 'click';
+	this.startPage = 1;
+	this.dir = 'x';
 
-		this.roll = this.wrap.children[0];
-		this.rolls = this.roll.children;
-		this.event = {};
-		this.pageNum = 0;
-		if (this.dir == 'x') {
-			this.pageSize = parseInt(this.rolls[0].offsetWidth);
-		}else if (this.dir == 'y') {
-			this.pageSize = parseInt(this.rolls[0].offsetHeight);
-		}
+	Object.assign(this,init);
 
-		if (this.loop) {
-			this.roll.appendChild(this.rolls[0].cloneNode(true));
-		}
-
-		if (this.startPage > 0 && this.startPage <= this.rolls.length - 1) {
-			this.n = this.startPage - 1;
-		}else {
-			this.n = 0;
-		}
-
-		if (this.dir == 'x') {
-			css(this.roll,'translateX',- this.n * this.pageSize);
-		}else if (this.dir == 'y') {
-			css(this.roll,'translateY',- this.n * this.pageSize);
-		}
-		css(this.roll,'translateZ',0);
+	this.roll = this.wrap.children[0];
+	this.rolls = this.roll.children;
+	if (this.dir == 'x') {
+		this.pageSize = parseInt(this.rolls[0].offsetWidth);
+	}else if (this.dir == 'y') {
+		this.pageSize = parseInt(this.rolls[0].offsetHeight);
 	}
-	shift () {
-		const THIS = this;
+
+	if (this.loop) {
+		this.roll.appendChild(this.rolls[0].cloneNode(true));
+	}
+
+	if (this.startPage > 0 && this.startPage <= this.rolls.length - 1) {
+		this.n = this.startPage - 1;
+	}else {
+		this.n = 0;
+	}
+
+	if (this.dir == 'x') {
+		css(this.roll,'translateX',- this.n * this.pageSize);
+	}else if (this.dir == 'y') {
+		css(this.roll,'translateY',- this.n * this.pageSize);
+	}
+
+	css(this.roll,'translateZ',0);
+
+	this.reset();
+	this.dotChange();
+
+	this.dots.forEach(function (item,index) {
+		item.addEventListener(_this.event,function() {
+			_this.reset();
+			item.classList.add(_this.activeClass);
+			_this.tab(index);
+		})
+	});
+
+}
+
+MyScroll.prototype = {
+	shift: function () {
+		let _this = this;
 		if (this.dir == 'x') {
 			mTween({
-				el: THIS.roll,
+				el: _this.roll,
 				attrs: {
-					'translateX': - THIS.n * THIS.pageSize
+					'translateX': - _this.n * _this.pageSize
 				},
 				duration: 500,
 				fx: 'easeOut',
 				cb: function () {
-					THIS.off = true;
-					THIS.trigger('scrollEnd');
+					_this.off = true;
 				}
 			})
 		}else if (this.dir == 'y') {
 			mTween({
-				el: THIS.roll,
+				el: _this.roll,
 				attrs: {
-					'translateY': - THIS.n * THIS.pageSize
+					'translateY': - _this.n * _this.pageSize
 				},
 				duration: 500,
 				fx: 'easeOut',
 				cb: function () {
-					THIS.off = true;
-					THIS.trigger('scrollEnd');
+					_this.off = true;
 				}
 			})
 		}
-	}
-	tab (index) {
+	},
+	tab: function (index) {
 		this.n = index;
 		this.shift();
-	}
-	noFrame () {
+	},
+	noFrame: function () {
 		if (this.dir == 'x') {
 			css(this.roll, 'translateX', -this.n * this.pageSize);
 		}else if (this.dir == 'y') {
 			css(this.roll, 'translateY', -this.n * this.pageSize);
 		}
-	}
-	next () {
+	},
+	reset: function () {
+		let _this = this;
+		this.dots.forEach(function (nav) {
+			nav.classList.remove(_this.activeClass);
+		})
+	},
+	dotChange: function () {
+		this.dots[this.n].classList.add('active')
+	},
+	next: function () {
+		let _this = this;
 		if (this.off) {
 			this.off = false;
 			if (this.loop) {
@@ -360,18 +384,26 @@ class MyScroll {
 					this.n = 0;
 					this.noFrame();
 				}
+				this.n++;
+				if(this.n <= this.rolls.length - 2) {
+					this.reset();
+					this.dotChange();
+				}else {
+					this.reset();
+					this.dots[0].classList.add('active');
+				}
 			}else {
-				if (this.n > this.rolls.length - 2) {
-					this.off = true;
-					return;
+				if (this.n < this.rolls.length - 2) {
+					this.n++;
+					this.reset();
+					this.dotChange();
 				}
 			}
-			this.n++;
-			this.pageNum = this.n % (this.rolls.length - 1);
 			this.shift();
 		}
-	}
-	prev () {
+	},
+	prev: function () {
+		let _this = this;
 		if (this.off) {
 			this.off = false;
 			if (this.loop) {
@@ -379,28 +411,37 @@ class MyScroll {
 					this.n = this.rolls.length - 1;
 					this.noFrame();
 				}
-			}else {
-				if (this.n < 1) {
-					this.off = true;
-					return ;
-				}
 			}
 			this.n--;
-			this.pageNum = this.n % (this.rolls.length - 1);
+			this.reset();
+			this.dotChange();
 			this.shift();
 		}
 	}
-	addEv(eventName,fn){
-		this.event[eventName] = this.event[eventName]||[];
-		for(let i = 0; i < this.event[eventName].length; i++){
-			if(this.event[eventName][i] == fn)return;
-		}
-		this.event[eventName].push(fn);
-	}
-	trigger(eventName){
-		if(!this.event[eventName])return;
-		this.event[eventName].forEach((fn)=>{
-			fn.call(this);
-		});
-	}
-}
+};
+
+
+let prev = document.querySelector('.prev');
+let next = document.querySelector('.next');
+let wrap = document.querySelector('.wrap');
+let navs = document.querySelectorAll('nav span');
+
+let scroll = new MyScroll({
+	wrap,
+	dots:navs,
+	loop: true,
+	activeClass: 'active',
+	startPage: 3
+});
+
+
+prev.onclick = function () {
+	scroll.prev();
+};
+next.onclick = function () {
+	scroll.next();
+};
+
+/*setInterval(function () {
+	scroll.next();
+},1500);*/
